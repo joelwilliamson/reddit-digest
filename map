@@ -9,3 +9,8 @@ FromJSON.hs
 ===========
 This module converts from JSON to a Haskell data structure.
 
+WebInterface.hs
+===============
+Create a webserve that writes schedule entries onto a TChan. This is how clients
+interact with the service. Subscribing and unsubsribing go through here. The
+requests are read by the scheduling and persisting modules.
