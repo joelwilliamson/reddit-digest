@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
 {-|
@@ -34,7 +33,10 @@ import FromJson
 -- This takes a chunk of text that has been HTML encoded and replaces all encoded
 -- symbols with their regular representation. It currently only handles '&', '<', '>'
 decodeHTML :: T.Text -> T.Text
-decodeHTML = foldr (.) (\x -> x) $ map (uncurry T.replace) [("&amp;","&"),("&lt;","<"),("&gt;",">")]
+decodeHTML = foldr ((.) . uncurry T.replace) id
+             [("&amp;","&")
+             ,("&lt;","<")
+             ,("&gt;",">")]
 
 -- Convert each article to only have the important data
 summary :: [Article] -> [(T.Text,T.Text)]
@@ -80,40 +82,37 @@ createDigest a = (++) header
                  . intersperse "<hr>"
                  . map (Lazy.unpack. createHTMLArticle)
                  $ a
-  where header = "<h2>" ++ (Lazy.fromStrict $ subreddit $ head a) ++ "</h2>"
+  where header = "<h2>" ++ Lazy.fromStrict (subreddit $ head a) ++ "</h2>"
         (++) = Lazy.append
 
 -- Create a mail message with the summary of the given reddit in the HTML part,
 -- addressed to the given email.
 createMessage :: T.Text -> Lazy.Text -> Mail
-createMessage address digest = Mail
-                               (Address (Just "Reddit Digest") "digest@joelwilliamson.ca")  -- From
-                               [(Address (Just "Recipient") address)] -- To
-                               [] -- CC
-                               [(Address (Just "Digest Logging") "digest-log@joelwilliamson.ca")] -- BCC
-                               [("Subject","Reddit Digest")] -- Other headers
-                               [[Part "text/html" None Nothing [] $ encodeUtf8 digest]]
+createMessage address digest =
+  Mail
+  (Address (Just "Reddit Digest") "digest@joelwilliamson.ca")  -- From
+  [Address (Just "Recipient") address] -- To
+  [] -- CC
+  [Address (Just "Digest Logging") "digest-log@joelwilliamson.ca"] -- BCC
+  [("Subject","Reddit Digest")] -- Other headers
+  [[Part "text/html" None Nothing [] $ encodeUtf8 digest]]
 
 
 -- fetchSub takes a uri and returns the json for that sub. It cannot handle the redirects from /r/random
 fetchSub :: BS.ByteString -> IO BS.ByteString
 fetchSub uri = do
-  let uri' = case parseURI $ BS.unpack uri of
-                 Nothing -> error "Couldn't parse URI"
-                 Just uri -> uri
+  let uri' = fromMaybe (error "Couldn't parse URI") (parseURI $ BS.unpack uri)
   response <- Network.HTTP.simpleHTTP (Request
                                        uri'
                                        GET
-                                       [(Header HdrContentLength "0")
-                                       ,(Header HdrUserAgent "reddit-digest by joelwilliamson")]
+                                       [Header HdrContentLength "0"
+                                       ,Header HdrUserAgent "reddit-digest by joelwilliamson"]
                                        "")
   responseCode <- case response of (Left _) -> error "Connection Error"
                                    (Right response') -> getResponseCode response
-  json <- case responseCode of (2,0,0) -> getResponseBody response
-                               (3,0,2) -> fetchRedirect response
-                               x -> error $ "Got response code " ++ show x
-  return json
-
+  case responseCode of (2,0,0) -> getResponseBody response
+                       (3,0,2) -> fetchRedirect response
+                       x -> error $ "Got response code " ++ show x
 
 fetchRedirect :: Result (Response BS.ByteString) -> IO BS.ByteString
 fetchRedirect (Left _) = error "We seem to have a connection error. This shouldn't be possible to reach"
@@ -137,7 +136,7 @@ sendDigest sub address = do
   result <- fetchSub $ "http://www.reddit.com" ++ (if address /= "" then "/r/" ++ sub ++"/.json" else "/.json")
   renderSendMail
     $ createMessage (Lazy.toStrict $ decodeUtf8 address)
-    $ createDigest $ fromText $ Lazy.toStrict $ (decodeUtf8 result)
+    $ createDigest $ fromText $ Lazy.toStrict $ decodeUtf8 result
   where (++) = BS.append
 
 main = do
