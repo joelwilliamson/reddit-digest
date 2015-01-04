@@ -10,5 +10,12 @@ cabal-dev
 cabal.sandbox.config
 cabal.config
 
+# The License is going to stay GPL v3. Any changes are just formatting.
+LICENSE
+
+# Hidden files
+.*
+
 # emacs files
 *~
+\#*
