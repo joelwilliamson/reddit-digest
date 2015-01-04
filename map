@@ -1,0 +1,11 @@
+
+
+Reddit.hs
+=========
+This module provides the core of the program. It is responsible for downloading
+the data from Reddit and composing the email.
+
+FromJSON.hs
+===========
+This module converts from JSON to a Haskell data structure.
+
