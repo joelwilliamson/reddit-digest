@@ -13,15 +13,17 @@ import Control.Concurrent.STM.TChan(TChan,tryReadTChan,newTChan)
 import Control.Monad.STM(STM,atomically)
 
 import Data.ByteString(ByteString)
+import Data.Char(toLower)
 
 data Frequency = Minute | Hour | Day | Week
-               deriving (Show,Read)
-{-instance Read Frequency where
-  readsPrec _ "minute" = [(Minute,"")]
-  readsPrec _ "hour" = [(Hour,"")]
-  readsPrec _ "day" = [(Day,"")]
-  readsPrec _ "week" = [(Week,"")]
-  readsPrec _ str = error $ "Can't read frequency " ++ str-}
+               deriving (Show)
+instance Read Frequency where
+  readsPrec _ = readsPrec . map toLower
+  readsPrec' "minute" = [(Minute,"")]
+  readsPrec' "hour" = [(Hour,"")]
+  readsPrec' "day" = [(Day,"")]
+  readsPrec' "week" = [(Week,"")]
+  readsPrec' str = error $ "Can't read frequency " ++ str-}
 
 type ScheduleEntry a = (Frequency, IO (), a)
 
