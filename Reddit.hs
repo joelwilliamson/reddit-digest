@@ -59,15 +59,15 @@ createHTMLArticle (Article {title, permalink, internal = SelfPost html})
   = format articleHTMLTemplate
     permalink
     title
-    decodeHTML html
+    (decodeHTML html)
     permalink
 createHTMLArticle (Article {title, permalink, internal = Link url thumbnail})
   = format imageHTMLTemplate
-    (Lazy.fromStrict url)
-    (Lazy.fromStrict thumbnail)
-    (Lazy.fromStrict url)
-    (Lazy.fromStrict title)
-    (Lazy.fromStrict permalink)
+    url
+    thumbnail
+    url
+    title
+    permalink
 
 -- This takes a block of text, and wraps each line (delimited by \n) with HTML
 -- paragraph tags.
