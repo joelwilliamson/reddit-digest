@@ -97,7 +97,7 @@ instance FromJSON ArticleWrapper where
 data ArticleRaw = ArticleRaw
                    { domain' :: T.Text
                    , subreddit' :: T.Text
-                   , selftextHtml' :: Maybe T.Text
+                   , selftext_html' :: Maybe T.Text
                    , selftext' :: T.Text
                    , author' :: T.Text
                    , score' :: Int
@@ -140,7 +140,7 @@ data FancyInternal = SelfPost T.Text | Link T.Text T.Text deriving Show
 toADT :: ArticleRaw -> Article
 toADT (ArticleRaw {..})
   | selftext' == "" = withCommon $ Link url' thumbnail'
-  | otherwise = withCommon $ SelfPost $ fromJust selftextHtml'
+  | otherwise = withCommon $ SelfPost $ fromJust selftext_html'
   where withCommon fi = Article {subreddit = subreddit'
                                      , author = author'
                                      , score = score'
