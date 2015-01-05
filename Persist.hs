@@ -52,8 +52,8 @@ openConnection path = do
   tables <- getTables conn
   if "users" `L.elem` tables
     then return conn
-    else run conn
-         $ "create table users (addr varchar(256) not null, sub varchar(256) not null, freq varchar(10) not null)" []
+    else do
+         run conn "create table users (addr varchar(256) not null, sub varchar(256) not null, freq varchar(10) not null)" []
          commit conn
          return conn
 
@@ -69,7 +69,7 @@ restore chan = do
   execute stmt []
   rows <- fetchAllRows stmt
   mapM_ (atomically . writeTChan chan)
-    . L.map ( \ [a,s,f] -> (read $ fromSql f :: Frequency,
+    $ L.map ( \ [a,s,f] -> (read $ fromSql f :: Frequency,
                             sendDigest (fromSql s) (fromSql a),
                             error "Don't save restored entries")) rows
   disconnect conn
