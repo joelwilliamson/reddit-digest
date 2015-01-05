@@ -140,7 +140,7 @@ data FancyInternal = SelfPost T.Text | Link T.Text T.Text deriving Show
 toADT :: ArticleRaw -> Article
 toADT (ArticleRaw {..})
   | selftext' == "" = withCommon $ Link url' thumbnail'
-  | otherwise = withCommon $ SelfPost $ fromJust selftext_html'
+  | otherwise = withCommon $ SelfPost $ fromJust selftextHtml'
   where withCommon fi = Article {subreddit = subreddit'
                                      , author = author'
                                      , score = score'
