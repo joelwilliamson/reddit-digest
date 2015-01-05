@@ -19,3 +19,15 @@ Persist.hs
 ==========
 Read requests from the main TChan and store them to a database. This also is
 responsible for reading the database at startup and sending it to the scheduler.
+
+SimpleScheduler.hs
+==================
+This module creates the IO action that schedules the mails. It takes an initial
+schedule and a TChan, and reads new schedule entries from the TChan. Whenever a
+job is scheduled to run, it forks off a new thread with that job.
+
+WebScheduled.hs
+===============
+The main module. It serves principally to connect the channels between the
+various other modules. It also has the function for creating authentication
+messages.
