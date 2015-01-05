@@ -24,12 +24,9 @@ import Data.Time
 import Control.Applicative((<$>),(<*>))
 import Control.Monad(liftM5)
 import Data.Digest.Pure.SHA(hmacSha1,showDigest)
+import qualified Data.Set as S
 
 import Data.Maybe(fromMaybe)
-
-{- convert :: Query -> ScheduleEntry
-convert [("freq",Just freq),("mesg",Just mesg)] = (read $ show freq, Char8.putStrLn mesg)
-convert _ = undefined -}
 
 hmac :: BS.L.ByteString ->
         BS.L.ByteString ->
@@ -57,11 +54,11 @@ convert l = flattenMaybe $ liftM5 aux freq addr sub auth reauth
         reauth :: Maybe String
         reauth = hmac <$> freqS <*> addr <*> sub
         aux freq addr sub auth reauth  = if auth == reauth
-          then Just (freq
-                     ,sendDigest sub addr
-                     ,(Char8.pack $ show freq
-                      ,BS.L.toStrict addr
-                      ,BS.L.toStrict  sub))
+          then Just $ ScheduleEntry { freq = freq
+                                    , action = sendDigest sub addr
+                                    , key = (Char8.pack $ show freq
+                                           ,BS.L.toStrict addr
+                                           ,BS.L.toStrict sub)}
           else Nothing
 
 mail :: WebInterface.Mail
@@ -91,7 +88,11 @@ sendAuthMessage addr sub freq auth = do
   where (++) = Data.Text.Lazy.append
 
 --checkQueue :: (Frequency, IO (),()
-checkQueue = (Minute,return (),undefined)
+-- These are dummy jobs used to trigger a check for new jobs
+checkQueue :: ScheduleEntry (Char8.ByteString, Char8.ByteString, Char8.ByteString)
+checkQueue = ScheduleEntry { freq = Minute
+                           , action = return ()
+                           , key = ("","","")}
 
 buildSched = do
   now <- getCurrentTime
@@ -109,5 +110,6 @@ main = do
   forkIO $ web 3000 convert mail schedulerChan
   forkIO $ save saverChan
   sched <- buildSched
-  runJobs sched schedulerChan
+  let current = S.fromList $ PQ.elemsU sched
+  runJobs (sched,current,S.empty) schedulerChan
 

@@ -20,12 +20,12 @@ checkerS conn = prepare conn "select * from users where addr = ? and sub = ? and
 -- entry that already exists is actually a request to delete the entry.
 -- I still need to remove the entry from the live schedule.
 saveTChan :: (IConnection c) =>
-             TChan (a,b,(ByteString,ByteString,ByteString))
+             TChan (ScheduleEntry (ByteString,ByteString,ByteString))
              -> c
              -> Statement
              -> IO ()
 saveTChan chan conn stmt = do
-  (_,_,(freq,addr,sub)) <- atomically $ readTChan chan
+  ScheduleEntry { key = (freq,addr,sub)} <- atomically $ readTChan chan
   let sqlArg = [toSql addr, toSql sub, toSql freq]
   checkStmt <- checkerS conn
   deleteStmt <- prepare conn "delete from users where addr = ? and sub = ? and freq = ?"
@@ -58,18 +58,21 @@ openConnection path = do
          return conn
 
 -- Connect a TChan to the database
+save :: TChan (ScheduleEntry (ByteString, ByteString, ByteString)) -> IO ()
 save chan = do
   conn <- openConnection "users.db"
   stmt <- insertS conn
   saveTChan chan conn stmt
 
+restore :: TChan (ScheduleEntry (ByteString, ByteString, ByteString)) -> IO ()
 restore chan = do
   conn <- openConnection "users.db"
   stmt <- selectS conn
   execute stmt []
   rows <- fetchAllRows stmt
   mapM_ (atomically . writeTChan chan)
-    $ L.map ( \ [a,s,f] -> (read $ fromSql f :: Frequency,
-                            sendDigest (fromSql s) (fromSql a),
-                            error "Don't save restored entries")) rows
+    $ L.map ( \ [a,s,f] ->
+               ScheduleEntry { freq = read $ fromSql f :: Frequency,
+                               action = sendDigest (fromSql s) (fromSql a),
+                               key = (fromSql f, fromSql a, fromSql s)}) rows
   disconnect conn
