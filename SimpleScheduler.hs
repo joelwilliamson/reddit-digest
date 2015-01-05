@@ -31,11 +31,15 @@ type ScheduleEntry a = (Frequency, IO (), a)
 type Schedule a = PQ.MinPQueue UTCTime (ScheduleEntry a)
 
 
-addJobsFromChan :: TChan (ScheduleEntry a) -> UTCTime -> Schedule a -> STM (Schedule a)
+addJobsFromChan :: TChan (ScheduleEntry a)
+                   -> UTCTime
+                   -> Schedule a
+                   -> STM (Schedule a)
 addJobsFromChan chan now sched = do
   nextJob <- tryReadTChan chan
   case nextJob of Nothing -> return sched
-                  Just job -> addJobsFromChan chan now $ PQ.insert now job sched
+                  Just job -> addJobsFromChan chan now
+                              $ PQ.insert now job sched
 
 nextScheduled :: Frequency -> UTCTime -> UTCTime
 nextScheduled Minute = addUTCTime 60
