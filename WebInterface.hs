@@ -19,6 +19,8 @@ import Control.Monad.STM (atomically)
 import Control.Concurrent
 import Debug.Trace
 
+-- Render a HTTP request to HTML. This is mostly useful for debugging, as it
+-- shows what the server thinks was requested
 displayRequest :: Request -> Lazy.ByteString
 displayRequest req =
   "<html>\n<head>\n<title>Request Successful</title>\n<head>\n<body>\n"
@@ -33,9 +35,14 @@ showQueryItem :: QueryItem -> Lazy.ByteString
 showQueryItem (name,Nothing) = Lazy.fromStrict name
 showQueryItem (name, Just value) = Lazy.fromStrict name `Lazy.append` " = " `Lazy.append` Lazy.fromStrict value
 
+-- A Convertor takes a query and tries to convert it to some value of type a.
+-- In actual practice, this creates a schedule entry, or fails if the
+-- authentication is invalid.
 type Convertor a = Query -> Maybe a
-type Mail = Query -> IO () -- This IO should be sending a authentication link
+type Mail = Query -> IO () -- This IO should be sending an authentication link
 
+-- Create a webserver IO that handles authentication and writes any requests
+-- onto a provided TChan.
 application :: Convertor a -> Mail -> TChan a -> Application
 application convert mail chan req respond =
   case lookup "auth" $ queryString req of
