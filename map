@@ -14,3 +14,8 @@ WebInterface.hs
 Create a webserve that writes schedule entries onto a TChan. This is how clients
 interact with the service. Subscribing and unsubsribing go through here. The
 requests are read by the scheduling and persisting modules.
+
+Persist.hs
+==========
+Read requests from the main TChan and store them to a database. This also is
+responsible for reading the database at startup and sending it to the scheduler.
