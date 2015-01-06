@@ -35,6 +35,10 @@ showQueryItem :: QueryItem -> Lazy.ByteString
 showQueryItem (name,Nothing) = Lazy.fromStrict name
 showQueryItem (name, Just value) = Lazy.fromStrict name `Lazy.append` " = " `Lazy.append` Lazy.fromStrict value
 
+sendSubscribeForm respond =
+  respond $ responseLBS status200 [("Content-Type","text/html")]
+  $ "<html>\n<head>\n<title>Reddit Digest</title>\n</head><body><p>Forms go here</p>\n</body></html>"
+
 -- A Convertor takes a query and tries to convert it to some value of type a.
 -- In actual practice, this creates a schedule entry, or fails if the
 -- authentication is invalid.
@@ -45,23 +49,26 @@ type Mail = Query -> IO () -- This IO should be sending an authentication link
 -- onto a provided TChan.
 application :: Convertor a -> Mail -> TChan a -> Application
 application convert mail chan req respond =
-  case lookup "auth" $ queryString req of
-    Nothing -> do
-      trace "No auth. Sending mail." $ return ()
-      mail $ queryString req
-      respond $
-        responseLBS status202 [("Content-Type","text/html")]
-        $ displayRequest req
-    Just _ ->
-      trace "Got auth. Handling..." $ case convert $ queryString req of
-        Just req' -> do
-          atomically $ writeTChan chan req'
+  case queryString req of
+    [] -> sendSubscribeForm respond
+    _ ->
+      case lookup "auth" $ queryString req of
+        Nothing -> do
+          trace "No auth. Sending mail." $ return ()
+          mail $ queryString req
           respond $
-            responseLBS status200 [("Content-Type","text/html")]
+            responseLBS status202 [("Content-Type","text/html")]
             $ displayRequest req
-        Nothing -> respond $
-                   responseLBS status400 [("Content-Type","text/html")]
-                   "<html><head><title>400 Bad Request</title></head><body><h2>400 Bad Request</h2></body></html>"
+        Just _ ->
+          trace "Got auth. Handling..." $ case convert $ queryString req of
+            Just req' -> do
+              atomically $ writeTChan chan req'
+              respond $
+                responseLBS status200 [("Content-Type","text/html")]
+                $ displayRequest req
+            Nothing -> respond $
+                       responseLBS status400 [("Content-Type","text/html")]
+                       "<html><head><title>400 Bad Request</title></head><body><h2>400 Bad Request</h2></body></html>"
 
 -- This packages the query string for any request made on the given port
 -- and puts the query into a channel. It also sends the query back to the
