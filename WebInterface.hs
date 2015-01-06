@@ -36,8 +36,7 @@ showQueryItem (name,Nothing) = Lazy.fromStrict name
 showQueryItem (name, Just value) = Lazy.fromStrict name `Lazy.append` " = " `Lazy.append` Lazy.fromStrict value
 
 sendSubscribeForm respond =
-  respond $ responseLBS status200 [("Content-Type","text/html")]
-  $ "<html>\n<head>\n<title>Reddit Digest</title>\n</head><body><p>Forms go here</p>\n</body></html>"
+  respond $ responseFile status200 [("Content-Type","text/html")] "SubscriptionForm.html" Nothing
 
 -- A Convertor takes a query and tries to convert it to some value of type a.
 -- In actual practice, this creates a schedule entry, or fails if the
