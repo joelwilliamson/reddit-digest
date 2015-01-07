@@ -47,21 +47,6 @@ sendSubscribeForm respond = do
 type Convertor a = Query -> Maybe a
 type Mail = Query -> IO () -- This IO should be sending an authentication link
 
-
-sendAuthMessage req = do
-  mail $ queryString req
-  respond $ responseLBS status202 [("Content-Type","text/html")]
-  $ displayRequest req
-
-badRequestMessage = do
-  respond $ responseLBS status400 [("Content-Type","text/html")]
-  $ "<html><head><title>400 Bad Request</title></head><body><h2>400 Bad Request</h2></body></html>"
-
-goodRequest chan req = do
-  atomically $ writeTChan chan req
-  respond $ responseLBS status200 [("Content-Type","text/html")]
-  $ displayRequest req
-
 -- Create a webserver IO that handles authentication and writes any requests
 -- onto a provided TChan.
 application :: Convertor a -> Mail -> TChan a -> Application
@@ -70,10 +55,22 @@ application convert mail chan req respond =
     [] -> sendSubscribeForm respond
     _ ->
       case lookup "auth" $ queryString req of
-        Nothing -> sendAuthMessage req
-        Just _ -> case convert $ queryString req of
-          Just req' -> goodRequest chan req'
-          Nothing -> badRequestMessage 
+        Nothing -> do
+          trace "No auth. Sending mail." $ return ()
+          mail $ queryString req
+          respond $
+            responseLBS status202 [("Content-Type","text/html")]
+            $ displayRequest req
+        Just _ ->
+          trace "Got auth. Handling..." $ case convert $ queryString req of
+            Just req' -> do
+              atomically $ writeTChan chan req'
+              respond $
+                responseLBS status200 [("Content-Type","text/html")]
+                $ displayRequest req
+            Nothing -> respond $
+                       responseLBS status400 [("Content-Type","text/html")]
+                       "<html><head><title>400 Bad Request</title></head><body><h2>400 Bad Request</h2></body></html>"
 
 -- This packages the query string for any request made on the given port
 -- and puts the query into a channel. It also sends the query back to the
