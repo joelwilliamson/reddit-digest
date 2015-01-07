@@ -21,9 +21,6 @@ import Debug.Trace
 
 import Paths_reddit_digest
 
----DANGEROUS !!!
-import System.IO.Unsafe(unsafePerformIO)
-
 -- Render a HTTP request to HTML. This is mostly useful for debugging, as it
 -- shows what the server thinks was requested
 displayRequest :: Request -> Lazy.ByteString
@@ -54,8 +51,6 @@ type Mail = Query -> IO () -- This IO should be sending an authentication link
 -- onto a provided TChan.
 application :: Convertor a -> Mail -> TChan a -> Application
 application convert mail chan req respond =
-  trace (show req)
-  $ trace ("With body: " ++ show (unsafePerformIO $ requestBody req)) $
   case queryString req of
     [] -> sendSubscribeForm respond
     _ ->
