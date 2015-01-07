@@ -4,6 +4,28 @@
   </head>
   <body>
     <h2>Subscription form goes here</h2>
+    <form action="/" method="get">
+      <div>
+	<label for="email">Email:</label>
+	<input type="email" id="email" />
+      </div>
+      <div>
+	<label for="reddit">Subreddit:</label>
+	<input type="text" id="reddit" />
+      </div>
+      <div>
+	<label for="freq">Frequency:</label>
+	<select id="freq">
+	  <option>minute</option>
+	  <option>hour</option>
+	  <option selected>day</option>
+	  <option>week</option>
+	</select>
+      </div>
+      <div class="button">
+	<button type="submit" id="submit">Submit</button>
+      </div>
+    </form>
   </body>
 </html>
 
