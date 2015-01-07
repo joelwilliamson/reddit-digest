@@ -48,7 +48,9 @@ type Mail = Query -> IO () -- This IO should be sending an authentication link
 -- onto a provided TChan.
 application :: Convertor a -> Mail -> TChan a -> Application
 application convert mail chan req respond =
-  trace (show req) $
+  body <- requestBody req
+  trace (show req)
+  $ trace ("With body: " ++ show body) $
   case queryString req of
     [] -> sendSubscribeForm respond
     _ ->
