@@ -70,9 +70,9 @@ restore chan = do
   stmt <- selectS conn
   execute stmt []
   rows <- fetchAllRows stmt
-  mapM_ (atomically . writeTChan chan)
-    $ L.map ( \ [a,s,f] ->
+  mapM_ ((atomically . writeTChan chan)
+    . ( \ [a,s,f] ->
                ScheduleEntry { freq = read $ fromSql f :: Frequency,
                                action = sendDigest (fromSql s) (fromSql a),
-                               key = (fromSql f, fromSql a, fromSql s)}) rows
+                               key = (fromSql f, fromSql a, fromSql s)})) rows
   disconnect conn

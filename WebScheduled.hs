@@ -54,7 +54,7 @@ convert l = flattenMaybe $ liftM5 aux freq addr sub auth reauth
         reauth :: Maybe String
         reauth = hmac <$> freqS <*> addr <*> sub
         aux freq addr sub auth reauth  = if auth == reauth
-          then Just $ ScheduleEntry { freq = freq
+          then Just ScheduleEntry { freq = freq
                                     , action = sendDigest sub addr
                                     , key = (Char8.pack $ show freq
                                            ,BS.L.toStrict addr

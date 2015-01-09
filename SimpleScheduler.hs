@@ -94,7 +94,7 @@ runJobs sched chan = do
   currentTime <- getCurrentTime
   s@(sched',_,_) <- atomically $ addJobsFromChan chan currentTime sched
   let (firstJob, nextSched, sched'') = nextJob s in
-    if PQ.null $ sched'
+    if PQ.null sched'
     then do
       threadDelay 1000000
       runJobs s chan
@@ -104,18 +104,3 @@ runJobs sched chan = do
       currentTime <- getCurrentTime
       threadDelay $ (*) 1000000 $ floor $ diffUTCTime nextSched currentTime
       runJobs sched'' chan :: IO ()
-  
--- Testing stuff
-{-
-job1 = (Minute, putStrLn "Job1","Job1")
-job2 = (Minute, putStrLn "Job2","Job2")
-job3 = (Minute, putStrLn "Job3","Job3")
-
-sched12 = do
-  now <- getCurrentTime
-  chan <- atomically newTChan
-  return (runJobs (PQ.insert now job1
-                   $ PQ.insert (addUTCTime 30 now) job2
-                   $ PQ.empty) chan
-          , chan)
--}
