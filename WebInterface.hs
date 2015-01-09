@@ -18,6 +18,7 @@ import Control.Concurrent.STM.TChan
 import Control.Monad.STM (atomically)
 import Control.Concurrent
 import Debug.Trace
+import Data.Maybe(isNothing)
 
 import Paths_reddit_digest
 
@@ -50,16 +51,12 @@ type Mail = Query -> IO () -- This IO should be sending an authentication link
 -- Create a webserver IO that handles authentication and writes any requests
 -- onto a provided TChan.
 application :: Convertor a -> Mail -> TChan a -> Application
-application convert mail chan req respond =
-  case queryString req of
-    [] -> sendSubscribeForm respond
-    _ ->
-      case lookup "auth" $ queryString req of
-        Nothing -> sendAuthMessage
-        Just _ ->
-          case convert $ queryString req of
-            Just req' -> goodRequest req'
-            Nothing -> badRequest
+application convert mail chan req respond
+  | null $ queryString req = sendSubscribeForm respond
+  | isNothing $ lookup "auth" $ queryString req = sendAuthMessage
+  | otherwise = case convert $ queryString req of
+    Just req' -> goodRequest req'
+    Nothing -> badRequest
   where sendAuthMessage = do
           trace "No auth. Sending mail." $ return ()
           mail $ queryString req
