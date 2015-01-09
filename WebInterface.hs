@@ -19,8 +19,7 @@ import Control.Monad.STM (atomically)
 import Control.Concurrent
 import Debug.Trace
 
----DANGEROUS !!!
-import System.IO.Unsafe(unsafePerformIO)
+import Paths_reddit_digest
 
 -- Render a HTTP request to HTML. This is mostly useful for debugging, as it
 -- shows what the server thinks was requested
@@ -38,8 +37,9 @@ showQueryItem :: QueryItem -> Lazy.ByteString
 showQueryItem (name,Nothing) = Lazy.fromStrict name
 showQueryItem (name, Just value) = Lazy.fromStrict name `Lazy.append` " = " `Lazy.append` Lazy.fromStrict value
 
-sendSubscribeForm respond =
-  respond $ responseFile status200 [("Content-Type","text/html")] "SubscriptionForm.html" Nothing
+sendSubscribeForm respond = do
+  path <- getDataFileName "SubscriptionForm.html"  
+  respond $ responseFile status200 [("Content-Type","text/html")] path Nothing
 
 -- A Convertor takes a query and tries to convert it to some value of type a.
 -- In actual practice, this creates a schedule entry, or fails if the
@@ -51,8 +51,6 @@ type Mail = Query -> IO () -- This IO should be sending an authentication link
 -- onto a provided TChan.
 application :: Convertor a -> Mail -> TChan a -> Application
 application convert mail chan req respond =
-  trace (show req)
-  $ trace ("With body: " ++ show (unsafePerformIO $ requestBody req)) $
   case queryString req of
     [] -> sendSubscribeForm respond
     _ ->

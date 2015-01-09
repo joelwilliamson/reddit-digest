@@ -45,14 +45,16 @@ build-type:          Simple
 -- Constraint on the version of Cabal needed to build this package.
 cabal-version:       >=1.10
 
+data-files: SubscriptionForm.html
+  
 
 executable reddit-digest
   -- .hs or .lhs file containing the Main module.
   main-is:             WebScheduled.hs
   
   -- Modules included in this executable, other than Main.
-  -- other-modules:       
-  
+  other-modules: Paths_reddit_digest
+
   -- LANGUAGE extensions used by modules in this package.
   other-extensions:    OverloadedStrings, NamedFieldPuns, RecordWildCards
   
