@@ -94,7 +94,7 @@ runJobs sched chan = do
   currentTime <- getCurrentTime
   s@(sched',_,_) <- atomically $ addJobsFromChan chan currentTime sched
   let (firstJob, nextSched, sched'') = nextJob s in
-    if PQ.null $ sched'
+    if PQ.null sched'
     then do
       threadDelay 1000000
       runJobs s chan
