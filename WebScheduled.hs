@@ -1,4 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
+-- | This is the entry point to the program. It establishes the TChans that pass
+-- information around, starts the web server and SQL backend, then runs the simple
+-- scheduler.
 
 import WebInterface
 import SimpleScheduler
@@ -25,45 +28,54 @@ import Control.Applicative((<$>),(<*>))
 import Control.Monad(liftM5,join)
 import Data.Digest.Pure.SHA(hmacSha1,showDigest)
 import qualified Data.Set as S
+import System.Random(randomIO)
+import Data.Int(Int64)
 
 import Data.Maybe(fromMaybe)
 
-hmac :: BS.L.ByteString ->
-        BS.L.ByteString ->
-        BS.L.ByteString ->
-        String
-hmac freq addr sub = showDigest
-                     $ hmacSha1 "SECRET: THIS SHOULD CHANGE"
+-- Create an authentication token. The secret key should be provided at program
+-- start, then the resulting function can be used whenever necessary.
+type AuthorizationGenerator = BS.L.ByteString ->
+                              BS.L.ByteString ->
+                              BS.L.ByteString ->
+                              String
+hmac :: BS.L.ByteString -> AuthorizationGenerator
+hmac secretKey freq addr sub = showDigest
+                     $ hmacSha1 secretKey
                      $ freq `BS.L.append` addr `BS.L.append` sub
 
 
 bslLookup assoc key= BS.L.fromStrict <$> join (lookup key assoc)
 
-convert :: Query -> Maybe (ScheduleEntry (Char8.ByteString,
-                                          Char8.ByteString,
-                                          Char8.ByteString))
-convert l = join $ liftM5 aux freq addr sub auth reauth
+-- Given a query, check if the authorization is valid, and if it is then construct
+-- a schedule entry for it.
+convert :: AuthorizationGenerator ->
+           Query ->
+           Maybe (ScheduleEntry (Char8.ByteString,
+                                 Char8.ByteString,
+                                 Char8.ByteString))
+convert authGen l = join $ liftM5 aux freq addr sub auth reauth
   where freq = read <$> Char8.unpack <$> join (lookup "freq" l)
         freqS = bslLookup l "freq"
         addr = bslLookup l "addr"
         sub = bslLookup l "sub"
         auth = Char8.unpack <$> join (lookup "auth" l)
         reauth :: Maybe String
-        reauth = hmac <$> freqS <*> addr <*> sub
+        reauth = authGen <$> freqS <*> addr <*> sub
         aux freq addr sub auth reauth  = if auth == reauth
           then Just ScheduleEntry { freq = freq
-                                    , action = sendDigest sub addr
+                                    , action = sendDigest (MessageType False) sub addr
                                     , key = (Char8.pack $ show freq
                                            ,BS.L.toStrict addr
                                            ,BS.L.toStrict sub)}
           else Nothing
 
-mail :: WebInterface.Mail
-mail l = fromMaybe (return ()) (sendAuthMessage <$> addr <*> sub <*> freq <*> auth)
+mail :: AuthorizationGenerator -> WebInterface.Mail
+mail authGen l = fromMaybe (return ()) (sendAuthMessage <$> addr <*> sub <*> freq <*> auth)
   where addr = bslLookup l "addr"
         freq = bslLookup l "freq"
         sub = bslLookup l "sub"
-        auth = BS.L.C8.pack <$> (hmac <$> freq <*> addr <*> sub)
+        auth = BS.L.C8.pack <$> (authGen <$> freq <*> addr <*> sub)
 
 sendAuthMessage :: BS.L.ByteString ->
                   BS.L.ByteString ->
@@ -101,10 +113,11 @@ buildSched = do
     -- some fractional type. We would get very small steps otherwise
 
 main = do
+  authGen <- hmac . BS.L.fromStrict . Char8.pack . show <$> (randomIO :: IO Int64)
   schedulerChan <- atomically newTChan
   restore schedulerChan
   saverChan <- atomically $ dupTChan schedulerChan
-  forkIO $ web 3000 convert mail schedulerChan
+  forkIO $ web 3000 (convert authGen) (mail authGen) schedulerChan
   forkIO $ save saverChan
   sched <- buildSched
   let current = S.fromList $ PQ.elemsU sched
