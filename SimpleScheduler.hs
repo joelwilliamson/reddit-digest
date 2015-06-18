@@ -17,6 +17,9 @@ import Control.Monad.STM(STM,atomically)
 import Data.ByteString(ByteString)
 import Data.Char(toLower)
 import qualified Data.Set as S
+import Data.Time(UTCTime(..))
+import Data.Time.Clock(secondsToDiffTime)
+import Data.Time.Calendar.WeekDate(toWeekDate)
 
 data Frequency = Minute | Hour | Day | Week
                deriving (Show,Ord,Eq)
@@ -27,8 +30,25 @@ instance Read Frequency where
           readsPrec' "day" = [(Day,"")]
           readsPrec' "week" = [(Week,"")]
           readsPrec' str = error $ "Can't read frequency " ++ str
+{-
+-- Return how far into the given period a certain time is
+-- E.g. Day (3:00 February 7) --> 3
+--    Month (February 7) --> 7
+currentTime :: Frequency -> UTCTime -> Int
+currentTime Minute t = floor (utctDayTime t) `mod` 60
+currentTime Hour t = (floor (utctDayTime t) `mod` 3600) `div` 60
+currentTime Day t = floor (utctDayTime t) `div` 3600
+currentTime Week t = (\(_,_,a) -> a) . toWeekDate $ utctDay t
 
+nextOccurrence :: Frequency -> Int -> UTCTime -> UTCTime
+-- These all have issues if the next time is tomorrow. In that case, it becomes necessary to manually increment the day.
+nextOccurrence Minute sec t = t {utctDayTime = (+sec) . (*60) . succ . (`div` 60) . floor $ utctDayTime t}
+nextOccurrence Hour min t = t {utctDayTime = (+min) . (*3600) . succ . (`div` 3600) . floor $ utctDayTime t}
+nextOccurrence Day hour t = t {utctDayTime = (+hour) . (*86400) . succ . (`div` 86400) . floor $ utctDayTime t}
+-}
 data ScheduleEntry a = ScheduleEntry { freq :: Frequency
+                                     , subdivision :: Int -- This specifies when in the time period the job should run.
+                                       -- For instance, it could say that an hourly job should run around minute 34.
                                      , action :: IO ()
                                      , key :: a}
 

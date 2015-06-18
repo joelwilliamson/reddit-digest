@@ -1,14 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
-{-|
-This module defines a function that mails a summary of a reddit to a specified
-address. It depends on the FromJSON module, which converts JSON represented as a
-ByteString to a data structure representing Reddit.
--}
-
+-- | This module defines a function that mails a summary of a reddit to a
+-- specified address. It depends on the FromJSON module, which converts JSON\
+-- represented as a ByteString to a data structure representing Reddit.
 module Reddit
-( sendDigest ) where
+( MessageType(..), sendDigest ) where
 
 
 import Network.HTTP
@@ -29,6 +26,9 @@ import Network.URI
 
 import FromJson
 
+data MessageType = MessageType {
+  mobile :: Bool
+  } deriving (Eq,Ord,Show)
 
 -- This takes a chunk of text that has been HTML encoded and replaces all encoded
 -- symbols with their regular representation. It currently only handles '&', '<', '>'
@@ -45,29 +45,46 @@ summary = map (\Article {title = t, internal = i} -> aux t i)
         aux t (Link url _) = (t,url)
 
 -- This takes arguments
---        permalink -> title -> body -> linkToComments (ie permalink)
-articleHTMLTemplate = "<div><a href='https://www.reddit.com" %stext% "' ><h3>" %stext% "</h3></a><p>" %stext% "</p><div><a href='https://www.reddit.com" %stext% "'>Comments</a></div></div>"
+--        subdomain -> permalink -> title -> body -> subdomain -> linkToComments (ie permalink)
+articleHTMLTemplate = "<div><a href='https://"
+                      %stext%".reddit.com/" -- subdomain
+                      %stext% "' ><h3>" -- permalink
+                      %stext% "</h3></a><p>" -- title
+                      %stext% "</p><div><a href='https://" --body
+                      %stext%".reddit.com" --subdomain
+                      %stext% "'>Comments</a></div></div>" -- comments
 
 -- This takes arguments
---        targetURL -> thumbnail -> targetURL -> title -> linkToComments (ie. permalink)
-imageHTMLTemplate = "<div><div style='display:inline-block' ><a href='" %stext% "' ><img src='" %stext% "' /></a></div><div style='display:inline-block' ><a href='" %stext% "' ><h3>" %stext% "</h3></a><a href='https://reddit.com" %stext% "' ><div>Comments</div></a></div></div>"
+--        targetURL -> thumbnail -> targetURL -> title -> subdomain -> inkToComments (ie. permalink)
+imageHTMLTemplate = "<div><div style='display:inline-block' ><a href='"
+                    %stext% "' ><img src='" -- subdomain
+                    %stext% "' /></a></div><div style='display:inline-block' ><a href='" -- thumbnail
+                    %stext% "' ><h3>" -- targetURL
+                    %stext% "</h3></a><a href='https://" -- title
+                    %stext%".reddit.com" -- subdomain
+                    %stext% "' ><div>Comments</div></a></div></div>" -- comments
 
 -- If the article is a selfpost, this creates a title and a body.
 -- If it is a link, it creates a title, link and thumbnail.
-createHTMLArticle :: Article -> Lazy.Text
-createHTMLArticle (Article {title, permalink, internal = SelfPost html})
+createHTMLArticle :: MessageType -> Article -> Lazy.Text
+createHTMLArticle mt (Article {title, permalink, internal = SelfPost html})
   = format articleHTMLTemplate
+    subdomain
     permalink
     title
     (decodeHTML html)
+    subdomain
     permalink
-createHTMLArticle (Article {title, permalink, internal = Link url thumbnail})
+  where subdomain = if mobile mt then "m" else "www"
+createHTMLArticle mt (Article {title, permalink, internal = Link url thumbnail})
   = format imageHTMLTemplate
     url
     thumbnail
     url
     title
+    subdomain
     permalink
+  where subdomain = if mobile mt then "m" else "www"
 
 -- This takes a block of text, and wraps each line (delimited by \n) with HTML
 -- paragraph tags.
@@ -75,12 +92,12 @@ paragraphs :: T.Text -> T.Text
 paragraphs = T.unlines . map (\l -> "<p>" `T.append` l `T.append` "</p>") . T.lines
 
 -- Given a list of article structs, this formats an HTML message and applies a nice header
-createDigest :: [Article] -> Lazy.Text
-createDigest a = (++) header
+createDigest :: MessageType -> [Article] -> Lazy.Text
+createDigest mt a = (++) header
                  . Lazy.pack
                  . unlines
                  . intersperse "<hr>"
-                 . map (Lazy.unpack. createHTMLArticle)
+                 . map (Lazy.unpack. createHTMLArticle mt)
                  $ a
   where header = "<h2>" ++ Lazy.fromStrict (subreddit $ head a) ++ "</h2>"
         (++) = Lazy.append
@@ -125,8 +142,8 @@ fetchRedirect (Right (Response code reason headers body)) =
 
 -- Create a mail action that fetches the given reddit and sends it to the
 -- specified email address
-sendDigest :: BS.ByteString -> BS.ByteString -> IO ()
-sendDigest sub address = do
+sendDigest :: MessageType -> BS.ByteString -> BS.ByteString -> IO ()
+sendDigest mt sub address = do
   putStrLn $ BS.unpack
     $ "Using address: "
     ++ "http://www.reddit.com"
@@ -136,10 +153,5 @@ sendDigest sub address = do
   result <- fetchSub $ "http://www.reddit.com" ++ (if address /= "" then "/r/" ++ sub ++"/.json" else "/.json")
   renderSendMail
     $ createMessage (Lazy.toStrict $ decodeUtf8 address)
-    $ createDigest $ fromText $ Lazy.toStrict $ decodeUtf8 result
+    $ createDigest mt $ fromText $ Lazy.toStrict $ decodeUtf8 result
   where (++) = BS.append
-
-main = do
-  args <- getArgs
-  let [sub,address] = args
-  sendDigest (BS.pack sub) (BS.pack address)

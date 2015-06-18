@@ -62,9 +62,9 @@ saveTChan chan conn insert check delete = do
 -- All these statements are used in the save functionality
 -- Prepare a statement to insert a new user into the database
 insertS :: Connection -> IO Statement
-insertS conn = prepare conn "insert into users (addr, sub, freq) values (?, ?, ?)"
-checkS conn = prepare conn "select * from users where addr = ? and sub = ? and freq = ?"
-deleteS conn = prepare conn "delete from users where addr = ? and sub = ? and freq = ?"
+insertS conn = prepare conn "insert into users (addr, sub, freq, mobile) values (?, ?, ?, ?)"
+checkS conn = prepare conn "select * from users where addr = ? and sub = ? and freq = ? "
+deleteS conn = prepare conn "delete from users where addr = ? and sub = ? and freq = ? "
 
 -- This is only used to restore the server from disk
 selectS conn = prepare conn "select * from users"
@@ -90,6 +90,8 @@ save chan = do
   del <- deleteS conn
   saveTChan chan conn ins check del
 
+-- Read from the database, and send every element in it over the TChan to the
+-- scheduler.
 restore :: TChan (ScheduleEntry (ByteString, ByteString, ByteString)) -> IO ()
 restore chan = do
   conn <- openConnection "users.db"
@@ -98,8 +100,8 @@ restore chan = do
   rows <- fetchAllRows stmt
   trace (show rows) $ return ()
   mapM_ ((atomically . writeTChan chan)
-    . ( \ [a,s,f] ->
+    . ( \ [a,s,f,mobile] ->
                ScheduleEntry { freq = read $ fromSql f :: Frequency,
-                               action = sendDigest (fromSql s) (fromSql a),
+                               action = sendDigest (MessageType $ fromSql mobile) (fromSql s) (fromSql a),
                                key = (fromSql f, fromSql a, fromSql s)})) rows
   disconnect conn
