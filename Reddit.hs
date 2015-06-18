@@ -81,7 +81,7 @@ createDigest a = (++) header
                  . intersperse "<hr>"
                  . map (Lazy.unpack. createHTMLArticle)
                  $ a
-  where css = "@media handheld { h2 { color: #f00; } }"
+  where css = "@media screen and (orientation: portrait) { h2 { color: #f00; } }"
         header = "<style>" ++ css ++ "</style>"
                  ++ "<h2>" ++ Lazy.fromStrict (subreddit $ head a) ++ "</h2>"
         (++) = Lazy.append
