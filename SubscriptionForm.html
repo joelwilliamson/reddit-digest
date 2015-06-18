@@ -2,7 +2,28 @@
 <html>
   <head>
     <title>Reddit Digest Subscription Form</title>
-    <link rel="stylesheet" href="subscription_form.css" />
+    <style>
+      body { font-size: 18px; font-family: sans-serif; }
+      
+      div.formBorder { border-width: 1px; border-style: solid;
+      border-color: #888; padding: 1em; display: inline-block; }
+      
+      input#submit { background-color: #e0eeff; color: #000;
+      font-weight: bold; border-color: #8bf; border-style: solid;
+      width: 100%; }
+      
+      select#freq { background-color: #fff; border-color: #8bf;
+      border-style: solid; width: 100%; }
+      
+      input[type="text"], input[type="email"] {
+      border-color: #8bf; border-style: solid; }
+      
+      label[for="email"], label[for="reddit"], label[for="freq"] {
+      display: none; }
+      
+      button, input, select, textarea {
+      font-family: inherit; font-size: 100%; }
+    </style>
   </head>
   <body>
     <h2>Reddit Digest - Subscribe Now</h2>
