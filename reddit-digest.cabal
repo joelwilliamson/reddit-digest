@@ -73,6 +73,7 @@ executable reddit-digest
                        -- pqueue on hackage depends on base<4.8. The version at
                        -- git@github.com:hsyl20/pqueue.git relaxes that constraint
                        pqueue >=1.2 && <1.4,
+                       random >=1.0 && <1.2,
                        SHA >= 1.5 && < 1.7,
                        stm >=2.4 && <2.5,
                        text >=1.2 && <1.3,
