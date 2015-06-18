@@ -1,31 +1,35 @@
+<!DOCTYPE html>
 <html>
   <head>
     <title>Reddit Digest Subscription Form</title>
+    <link rel="stylesheet" href="subscription_form.css" />
   </head>
   <body>
     <h2>Reddit Digest - Subscribe Now</h2>
-    <form method="get">
-      <div>
-	<label for="email">Email:</label>
-	<input type="email" id="email" name="addr" />
-      </div>
-      <div>
-	<label for="reddit">Subreddit:</label>
-	<input type="text" id="reddit" name="sub" />
-      </div>
-      <div>
-	<label for="freq">Frequency:</label>
-	<select id="freq" name="freq" >
-	  <option>minute</option>
-	  <option>hour</option>
-	  <option selected>day</option>
-	  <option>week</option>
-	</select>
-      </div>
-      <div class="button">
-	<input type="submit" id="submit"></button>
-      </div>
-    </form>
+    <div class="formBorder">
+      <form method="get">
+        <div>
+	  <label for="email">Email:</label>
+	  <input type="email" id="email" name="addr" placeholder="user@example.org" />
+        </div>
+        <div>
+	  <label for="reddit">Subreddit:</label>
+	  <input type="text" id="reddit" name="sub" placeholder="AdviceAnimals/new" />
+        </div>
+        <div>
+	  <label for="freq">Frequency:</label>
+	  <select id="freq" name="freq" >
+	    <option>minute</option>
+	    <option>hour</option>
+	    <option selected>day</option>
+	    <option>week</option>
+	  </select>
+        </div>
+        <div class="button">
+          <input type="submit" id="submit" >
+        </div>
+      </form>
+    </div>
   </body>
 </html>
 
