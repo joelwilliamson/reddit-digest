@@ -22,7 +22,7 @@ import Control.Concurrent(forkIO)
 import qualified Data.PQueue.Prio.Min as PQ
 import Data.Time
 import Control.Applicative((<$>),(<*>))
-import Control.Monad(liftM5)
+import Control.Monad(liftM5,join)
 import Data.Digest.Pure.SHA(hmacSha1,showDigest)
 import qualified Data.Set as S
 
@@ -36,21 +36,18 @@ hmac freq addr sub = showDigest
                      $ hmacSha1 "SECRET: THIS SHOULD CHANGE"
                      $ freq `BS.L.append` addr `BS.L.append` sub
 
-flattenMaybe :: Maybe (Maybe a) -> Maybe a
-flattenMaybe (Just (Just a)) = Just a
-flattenMaybe _ = Nothing
 
-bslLookup assoc key= BS.L.fromStrict <$> flattenMaybe (lookup key assoc)
+bslLookup assoc key= BS.L.fromStrict <$> join (lookup key assoc)
 
 convert :: Query -> Maybe (ScheduleEntry (Char8.ByteString,
                                           Char8.ByteString,
                                           Char8.ByteString))
-convert l = flattenMaybe $ liftM5 aux freq addr sub auth reauth
-  where freq = read <$> Char8.unpack <$> flattenMaybe (lookup "freq" l)
+convert l = join $ liftM5 aux freq addr sub auth reauth
+  where freq = read <$> Char8.unpack <$> join (lookup "freq" l)
         freqS = bslLookup l "freq"
         addr = bslLookup l "addr"
         sub = bslLookup l "sub"
-        auth = Char8.unpack <$> flattenMaybe (lookup "auth" l)
+        auth = Char8.unpack <$> join (lookup "auth" l)
         reauth :: Maybe String
         reauth = hmac <$> freqS <*> addr <*> sub
         aux freq addr sub auth reauth  = if auth == reauth
@@ -112,4 +109,3 @@ main = do
   sched <- buildSched
   let current = S.fromList $ PQ.elemsU sched
   runJobs (sched,current,S.empty) schedulerChan
-
