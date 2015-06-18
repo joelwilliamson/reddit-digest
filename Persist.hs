@@ -50,11 +50,11 @@ saveTChan chan conn insert check delete = do
 -- entry that already exists is actually a request to delete the entry.
 -- I still need to remove the entry from the live schedule.
   ScheduleEntry { key = (freq,addr,sub,mobile)} <- atomically $ readTChan chan
-  let sqlArg = [toSql addr, toSql sub, toSql freq, toSql mobile]
+  let sqlArg = [toSql addr, toSql sub, toSql freq]
   execute check sqlArg
   found <- fetchRow check
   case found of 
-    Nothing -> trace "Adding to database" $  execute insert sqlArg
+    Nothing -> trace "Adding to database" $  execute insert $ sqlArg ++ [toSql mobile]
     Just _ -> trace "Removing from database" $ execute delete sqlArg
   commit conn
   saveTChan chan conn insert check delete
@@ -77,7 +77,7 @@ openConnection path = do
   if "users" `L.elem` tables
     then return conn
     else do
-         run conn "create table users (addr varchar(256) not null, sub varchar(256) not null, freq varchar(10) not null)" []
+         run conn "create table users (addr varchar(256) not null, sub varchar(256) not null, freq varchar(10) not null, mobile bool not null)" []
          commit conn
          return conn
 
