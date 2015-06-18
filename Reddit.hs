@@ -1,11 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
-{-|
-This module defines a function that mails a summary of a reddit to a specified
-address. It depends on the FromJSON module, which converts JSON represented as a
-ByteString to a data structure representing Reddit.
--}
+-- | This module defines a function that mails a summary of a reddit to a
+-- specified address. It depends on the FromJSON module, which
+-- converts JSON represented as a ByteString to a data structure
+-- representing Reddit.
 
 module Reddit
 ( sendDigest ) where
@@ -82,7 +81,9 @@ createDigest a = (++) header
                  . intersperse "<hr>"
                  . map (Lazy.unpack. createHTMLArticle)
                  $ a
-  where header = "<h2>" ++ Lazy.fromStrict (subreddit $ head a) ++ "</h2>"
+  where css = "@media handheld { h2 { color: #f00; } }"
+        header = "<style>" ++ css ++ "</style>"
+                 ++ "<h2>" ++ Lazy.fromStrict (subreddit $ head a) ++ "</h2>"
         (++) = Lazy.append
 
 -- Create a mail message with the summary of the given reddit in the HTML part,
