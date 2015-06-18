@@ -39,7 +39,7 @@ currentTime Week t = (\(_,_,a) -> a) . toWeekDate $ utctDay t
 -- the state of the particular subscription in the DB. If the subscription
 -- already existed, it is removed, and if it didn't it is added.
 saveTChan :: (IConnection c) =>
-             TChan (ScheduleEntry (ByteString,ByteString,ByteString))
+             TChan (ScheduleEntry (ByteString,ByteString,ByteString,Bool))
              -> c
              -> Statement
              -> Statement
@@ -49,8 +49,8 @@ saveTChan chan conn insert check delete = do
 -- This is a bit hacky. To enable deleting, assume that a request to add an
 -- entry that already exists is actually a request to delete the entry.
 -- I still need to remove the entry from the live schedule.
-  ScheduleEntry { key = (freq,addr,sub)} <- atomically $ readTChan chan
-  let sqlArg = [toSql addr, toSql sub, toSql freq]
+  ScheduleEntry { key = (freq,addr,sub,mobile)} <- atomically $ readTChan chan
+  let sqlArg = [toSql addr, toSql sub, toSql freq, toSql mobile]
   execute check sqlArg
   found <- fetchRow check
   case found of 
@@ -82,7 +82,7 @@ openConnection path = do
          return conn
 
 -- Connect a TChan to the database
-save :: TChan (ScheduleEntry (ByteString, ByteString, ByteString)) -> IO ()
+save :: TChan (ScheduleEntry (ByteString, ByteString, ByteString,Bool)) -> IO ()
 save chan = do
   conn <- openConnection "users.db"
   ins <- insertS conn
@@ -92,7 +92,7 @@ save chan = do
 
 -- Read from the database, and send every element in it over the TChan to the
 -- scheduler.
-restore :: TChan (ScheduleEntry (ByteString, ByteString, ByteString)) -> IO ()
+restore :: TChan (ScheduleEntry (ByteString, ByteString, ByteString,Bool)) -> IO ()
 restore chan = do
   conn <- openConnection "users.db"
   stmt <- selectS conn
@@ -103,5 +103,5 @@ restore chan = do
     . ( \ [a,s,f,mobile] ->
                ScheduleEntry { freq = read $ fromSql f :: Frequency,
                                action = sendDigest (MessageType $ fromSql mobile) (fromSql s) (fromSql a),
-                               key = (fromSql f, fromSql a, fromSql s)})) rows
+                               key = (fromSql f, fromSql a, fromSql s, fromSql mobile)})) rows
   disconnect conn

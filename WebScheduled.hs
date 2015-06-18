@@ -53,7 +53,8 @@ convert :: AuthorizationGenerator ->
            Query ->
            Maybe (ScheduleEntry (Char8.ByteString,
                                  Char8.ByteString,
-                                 Char8.ByteString))
+                                 Char8.ByteString,
+                                 Bool))
 convert authGen l = join $ liftM5 aux freq addr sub auth reauth
   where freq = read <$> Char8.unpack <$> join (lookup "freq" l)
         freqS = bslLookup l "freq"
@@ -68,7 +69,8 @@ convert authGen l = join $ liftM5 aux freq addr sub auth reauth
                                     , action = sendDigest (MessageType mobile) sub addr
                                     , key = (Char8.pack $ show freq
                                            ,BS.L.toStrict addr
-                                           ,BS.L.toStrict sub)}
+                                           ,BS.L.toStrict sub
+                                           ,mobile)}
           else Nothing
 
 mail :: AuthorizationGenerator -> WebInterface.Mail
@@ -99,10 +101,10 @@ sendAuthMessage addr sub freq auth = do
 
 --checkQueue :: (Frequency, IO (),()
 -- These are dummy jobs used to trigger a check for new jobs
-checkQueue :: ScheduleEntry (Char8.ByteString, Char8.ByteString, Char8.ByteString)
+checkQueue :: ScheduleEntry (Char8.ByteString, Char8.ByteString, Char8.ByteString,Bool)
 checkQueue = ScheduleEntry { freq = Minute
                            , action = return ()
-                           , key = ("","","")}
+                           , key = ("","","",False)}
 
 buildSched = do
   now <- getCurrentTime
