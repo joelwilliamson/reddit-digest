@@ -31,7 +31,7 @@ import qualified Data.Set as S
 import System.Random(randomIO)
 import Data.Int(Int64)
 
-import Data.Maybe(fromMaybe)
+import Data.Maybe(fromMaybe,isJust)
 
 -- Create an authentication token. The secret key should be provided at program
 -- start, then the resulting function can be used whenever necessary.
@@ -59,12 +59,13 @@ convert authGen l = join $ liftM5 aux freq addr sub auth reauth
         freqS = bslLookup l "freq"
         addr = bslLookup l "addr"
         sub = bslLookup l "sub"
+        mobile = isJust $ lookup "mobile" l
         auth = Char8.unpack <$> join (lookup "auth" l)
         reauth :: Maybe String
         reauth = authGen <$> freqS <*> addr <*> sub
         aux freq addr sub auth reauth  = if auth == reauth
           then Just ScheduleEntry { freq = freq
-                                    , action = sendDigest (MessageType False) sub addr
+                                    , action = sendDigest (MessageType mobile) sub addr
                                     , key = (Char8.pack $ show freq
                                            ,BS.L.toStrict addr
                                            ,BS.L.toStrict sub)}
