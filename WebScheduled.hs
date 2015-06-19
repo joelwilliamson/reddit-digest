@@ -30,6 +30,7 @@ import Data.Digest.Pure.SHA(hmacSha1,showDigest)
 import qualified Data.Set as S
 import System.Random(randomIO)
 import Data.Int(Int64)
+import Debug.Trace(trace)
 
 import Data.Maybe(fromMaybe,isJust)
 
@@ -71,7 +72,7 @@ convert authGen l = join $ liftM5 aux freq addr sub auth reauth
                                            ,BS.L.toStrict addr
                                            ,BS.L.toStrict sub
                                            ,mobile)}
-          else Nothing
+          else trace "Authorization failed" Nothing
 
 mail :: AuthorizationGenerator -> WebInterface.Mail
 mail authGen l = fromMaybe (return ()) (sendAuthMessage <$> addr <*> sub <*> freq <*> auth)

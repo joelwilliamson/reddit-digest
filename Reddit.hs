@@ -24,6 +24,7 @@ import Network.Mail.Mime
 import Network.Stream
 import Network.URI
 
+import Debug.Trace(trace)
 import FromJson
 
 data MessageType = MessageType {
@@ -138,7 +139,8 @@ fetchRedirect (Right (Response code reason headers body)) =
   $ BS.pack
   $ head
   $ map (\ (Header _ content) -> content)
-  $ filter (\ (Header name content) -> name == HdrLocation) headers
+  $ filter (\ (Header name content) -> name == HdrLocation)
+  $ trace ("Redirecting with : " ++ show headers) headers
 
 -- Create a mail action that fetches the given reddit and sends it to the
 -- specified email address
