@@ -30,6 +30,7 @@ import Data.Digest.Pure.SHA(hmacSha1,showDigest)
 import qualified Data.Set as S
 import System.Random(randomIO)
 import Data.Int(Int64)
+import Control.Applicative(pure)
 import Debug.Trace(trace)
 
 import Data.Maybe(fromMaybe,isJust)
