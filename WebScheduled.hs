@@ -75,18 +75,20 @@ convert authGen l = join $ liftM5 aux freq addr sub auth reauth
           else trace "Authorization failed" Nothing
 
 mail :: AuthorizationGenerator -> WebInterface.Mail
-mail authGen l = fromMaybe (return ()) (sendAuthMessage <$> addr <*> sub <*> freq <*> auth)
+mail authGen l = fromMaybe (return ()) (sendAuthMessage <$> addr <*> sub <*> freq <*> auth <*> pure mobile)
   where addr = bslLookup l "addr"
         freq = bslLookup l "freq"
         sub = bslLookup l "sub"
+        mobile = isJust $ lookup "mobile" l
         auth = BS.L.C8.pack <$> (authGen <$> freq <*> addr <*> sub)
 
 sendAuthMessage :: BS.L.ByteString ->
                   BS.L.ByteString ->
                   BS.L.ByteString ->
                   BS.L.ByteString ->
+                  Bool ->
                   IO ()
-sendAuthMessage addr sub freq auth = do
+sendAuthMessage addr sub freq auth mobile = do
   mail <- simpleMail (Address Nothing $ Strict.decodeUtf8 $ BS.L.toStrict addr)
           (Address (Just "Reddit Digest") "digest@joelwilliamson.ca")
           "Authentication" ""
@@ -95,6 +97,7 @@ sendAuthMessage addr sub freq auth = do
            ++ "&addr=" ++ decodeUtf8 addr
            ++ "&sub=" ++ decodeUtf8 sub
            ++ "&auth=" ++ decodeUtf8 auth
+           ++ if mobile then "&mobile" else ""
            ++ "' >Click link to authenticate</a>")
           []
   renderSendMail mail
