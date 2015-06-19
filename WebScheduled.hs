@@ -98,7 +98,7 @@ sendAuthMessage addr sub freq auth mobile = do
            ++ "&addr=" ++ decodeUtf8 addr
            ++ "&sub=" ++ decodeUtf8 sub
            ++ "&auth=" ++ decodeUtf8 auth
-           ++ if mobile then "&mobile" else ""
+           ++ (if mobile then "&mobile" else "")
            ++ "' >Click link to authenticate</a>")
           []
   renderSendMail mail
