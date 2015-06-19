@@ -93,7 +93,13 @@ sendAuthMessage addr sub freq auth mobile = do
   mail <- simpleMail (Address Nothing $ Strict.decodeUtf8 $ BS.L.toStrict addr)
           (Address (Just "Reddit Digest") "digest@joelwilliamson.ca")
           "Authentication" ""
-          ("<a href='http://www.joelwilliamson.ca:3000/?"
+          ("A request has been made to subscribe this email address to "
+           ++ decodeUtf8 sub
+           ++ " with a summary delivered every "
+           ++ decodeUtf8 freq
+           ++ "."
+           ++ (if mobile then " Links will be directed to the mobile comments." else "")
+           ++ "<a href='http://www.joelwilliamson.ca:3000/?"
            ++ "freq=" ++ decodeUtf8 freq
            ++ "&addr=" ++ decodeUtf8 addr
            ++ "&sub=" ++ decodeUtf8 sub
